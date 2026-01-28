@@ -1,14 +1,15 @@
-import { memo, useCallback } from 'react';
+import { memo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { BlurView } from 'expo-blur';
 import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
 
 import { CATEGORIES, type Category } from '../constants/sounds';
-import { COLORS, LAYOUT, TYPOGRAPHY, ANIMATION } from '../constants/theme';
+import { COLORS, LAYOUT, TYPOGRAPHY, ANIMATION, BLUR } from '../constants/theme';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 interface CategoryTabsProps {
   selectedCategory: string;
@@ -66,32 +67,38 @@ const CategoryTab = memo(function CategoryTab({
   onPress,
   badge,
 }: CategoryTabProps) {
-  const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(
-      isSelected ? COLORS.accent.primary : COLORS.background.elevated,
-      { duration: ANIMATION.duration.fast }
-    ),
+  const animatedBorderStyle = useAnimatedStyle(() => ({
     borderColor: withTiming(
-      isSelected ? COLORS.accent.primary : COLORS.border,
+      isSelected ? 'rgba(255, 255, 255, 0.25)' : COLORS.glass.border,
       { duration: ANIMATION.duration.fast }
     ),
   }));
 
   return (
-    <AnimatedPressable
-      onPress={onPress}
-      style={[styles.tab, animatedStyle]}
-    >
-      <Text style={styles.tabIcon}>{category.icon}</Text>
-      <Text style={[styles.tabText, isSelected && styles.tabTextSelected]}>
-        {category.name}
-      </Text>
-      {badge !== undefined && badge > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge}</Text>
-        </View>
-      )}
-    </AnimatedPressable>
+    <Pressable onPress={onPress}>
+      <AnimatedView style={[styles.tabWrapper, animatedBorderStyle]}>
+        <BlurView
+          intensity={isSelected ? BLUR.medium : BLUR.light}
+          tint="dark"
+          style={styles.tabBlur}
+        >
+          <View style={[
+            styles.tab,
+            isSelected && styles.tabSelected,
+          ]}>
+            <Text style={styles.tabIcon}>{category.icon}</Text>
+            <Text style={[styles.tabText, isSelected && styles.tabTextSelected]}>
+              {category.name}
+            </Text>
+            {badge !== undefined && badge > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{badge}</Text>
+              </View>
+            )}
+          </View>
+        </BlurView>
+      </AnimatedView>
+    </Pressable>
   );
 });
 
@@ -103,14 +110,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: LAYOUT.screenPadding,
     gap: 8,
   },
+  tabWrapper: {
+    borderRadius: LAYOUT.radiusFull,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  tabBlur: {
+    overflow: 'hidden',
+  },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: LAYOUT.radiusFull,
+    paddingVertical: 10,
     gap: 6,
-    borderWidth: 1,
+    backgroundColor: COLORS.glass.light,
+  },
+  tabSelected: {
+    backgroundColor: COLORS.glass.medium,
   },
   tabIcon: {
     fontSize: 14,

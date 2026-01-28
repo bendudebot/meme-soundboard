@@ -2,10 +2,11 @@ import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Audio } from 'expo-av';
 
 import { SOUNDS, type MemeSound } from '../constants/sounds';
-import { COLORS, LAYOUT, TYPOGRAPHY, CONFIG } from '../constants/theme';
+import { COLORS, LAYOUT, TYPOGRAPHY, CONFIG, BLUR } from '../constants/theme';
 import { useSoundStore } from '../store/useSoundStore';
 import { SoundButton, CategoryTabs, SearchBar } from '../components';
 
@@ -103,6 +104,14 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Background gradient */}
+      <LinearGradient
+        colors={COLORS.background.gradient}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
@@ -143,13 +152,14 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Ad Banner */}
-        <LinearGradient
-          colors={[COLORS.background.secondary, COLORS.background.primary]}
-          style={styles.adBanner}
-        >
-          <Text style={styles.adText}>Ad Banner</Text>
-        </LinearGradient>
+        {/* Ad Banner - Glass style */}
+        <View style={styles.adBannerWrapper}>
+          <BlurView intensity={BLUR.medium} tint="dark" style={styles.adBannerBlur}>
+            <View style={styles.adBanner}>
+              <Text style={styles.adText}>Ad Banner</Text>
+            </View>
+          </BlurView>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -174,7 +184,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: TYPOGRAPHY.sizes.title,
-    fontWeight: TYPOGRAPHY.weights.heavy,
+    fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.text.primary,
     letterSpacing: -0.5,
   },
@@ -186,7 +196,7 @@ const styles = StyleSheet.create({
   },
   grid: {
     paddingHorizontal: LAYOUT.screenPadding,
-    paddingBottom: 80,
+    paddingBottom: 90,
     paddingTop: 8,
   },
   row: {
@@ -212,14 +222,23 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.weights.medium,
     lineHeight: 24,
   },
-  adBanner: {
+  adBannerWrapper: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    overflow: 'hidden',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glass.borderLight,
+  },
+  adBannerBlur: {
+    overflow: 'hidden',
+  },
+  adBanner: {
     paddingVertical: 16,
-    paddingBottom: 24,
+    paddingBottom: 28,
     alignItems: 'center',
+    backgroundColor: COLORS.glass.light,
   },
   adText: {
     color: COLORS.text.muted,

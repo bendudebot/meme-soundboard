@@ -1,6 +1,6 @@
 /**
  * Design tokens for Meme Soundboard
- * Modern, dark theme inspired by Spotify/premium music apps
+ * Apple Glassmorphism - iOS Control Center / visionOS inspired
  */
 
 // =============================================================================
@@ -8,36 +8,79 @@
 // =============================================================================
 
 export const COLORS = {
-  // Background
+  // Background - Deep dark with subtle blue undertone
   background: {
-    primary: '#0D0D0F',
-    secondary: '#141416',
-    tertiary: '#1A1A1E',
-    elevated: '#212126',
+    primary: '#000000',
+    secondary: '#0A0A0C',
+    gradient: ['#0A0A0C', '#141418', '#0A0A0C'] as const,
   },
 
-  // Accent - subtle purple/blue tones
+  // Glass surfaces
+  glass: {
+    light: 'rgba(255, 255, 255, 0.08)',
+    medium: 'rgba(255, 255, 255, 0.12)',
+    strong: 'rgba(255, 255, 255, 0.18)',
+    border: 'rgba(255, 255, 255, 0.1)',
+    borderLight: 'rgba(255, 255, 255, 0.06)',
+  },
+
+  // Accent colors - subtle, desaturated
   accent: {
-    primary: '#8B5CF6',
-    secondary: '#6366F1',
-    muted: 'rgba(139, 92, 246, 0.15)',
+    primary: 'rgba(139, 92, 246, 0.9)',      // Purple
+    secondary: 'rgba(99, 102, 241, 0.9)',    // Indigo
+    blue: 'rgba(59, 130, 246, 0.9)',
+    cyan: 'rgba(6, 182, 212, 0.9)',
+    green: 'rgba(34, 197, 94, 0.9)',
+    amber: 'rgba(245, 158, 11, 0.9)',
+    rose: 'rgba(244, 63, 94, 0.9)',
+    pink: 'rgba(236, 72, 153, 0.9)',
   },
 
   // Text
   text: {
-    primary: '#FFFFFF',
+    primary: 'rgba(255, 255, 255, 0.95)',
     secondary: 'rgba(255, 255, 255, 0.7)',
     tertiary: 'rgba(255, 255, 255, 0.5)',
     muted: 'rgba(255, 255, 255, 0.3)',
   },
 
-  // UI Elements
-  border: 'rgba(255, 255, 255, 0.08)',
-  overlay: 'rgba(0, 0, 0, 0.5)',
-
   // Status
-  favorite: '#EF4444',
-  success: '#22C55E',
+  favorite: '#FF375F',
+  success: '#30D158',
+} as const;
+
+// =============================================================================
+// GLASS EFFECT STYLES
+// =============================================================================
+
+export const GLASS = {
+  // Standard glass card
+  card: {
+    backgroundColor: COLORS.glass.light,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+
+  // Elevated glass (more prominent)
+  elevated: {
+    backgroundColor: COLORS.glass.medium,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+
+  // Subtle glass (less prominent)
+  subtle: {
+    backgroundColor: COLORS.glass.light,
+    borderWidth: 0.5,
+    borderColor: COLORS.glass.borderLight,
+  },
+
+  // Active/selected state
+  active: {
+    backgroundColor: COLORS.glass.strong,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
 } as const;
 
 // =============================================================================
@@ -52,10 +95,11 @@ export const LAYOUT = {
   gridColumns: 4,
   gridGap: 10,
 
-  // Border radius
-  radiusSmall: 8,
-  radiusMedium: 12,
-  radiusLarge: 16,
+  // Border radius - generous for glass effect
+  radiusSmall: 10,
+  radiusMedium: 16,
+  radiusLarge: 20,
+  radiusXL: 24,
   radiusFull: 9999,
 } as const;
 
@@ -71,7 +115,7 @@ export const TYPOGRAPHY = {
     lg: 16,
     xl: 20,
     xxl: 24,
-    title: 28,
+    title: 32,
   },
   weights: {
     regular: '400' as const,
@@ -87,17 +131,17 @@ export const TYPOGRAPHY = {
 // =============================================================================
 
 export const ANIMATION = {
-  // Press feedback
+  // Press feedback - subtle for glass
   press: {
-    scale: 0.92,
-    duration: 80,
+    scale: 0.94,
+    duration: 100,
   },
 
   // Spring configs (reanimated)
   spring: {
-    gentle: { damping: 15, stiffness: 150 },
-    bouncy: { damping: 10, stiffness: 200 },
-    snappy: { damping: 20, stiffness: 300 },
+    gentle: { damping: 20, stiffness: 180 },
+    bouncy: { damping: 12, stiffness: 200 },
+    snappy: { damping: 20, stiffness: 400 },
   },
 
   // Timing
@@ -109,39 +153,61 @@ export const ANIMATION = {
 } as const;
 
 // =============================================================================
-// SHADOWS
+// SHADOWS - Very soft for glass
 // =============================================================================
 
 export const SHADOWS = {
-  small: {
+  soft: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 4,
   },
   medium: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  large: {
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
     elevation: 8,
   },
-  glow: (color: string) => ({
+  glow: (color: string, opacity = 0.4) => ({
     shadowColor: color,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowOpacity: opacity,
+    shadowRadius: 16,
     elevation: 0,
   }),
 } as const;
+
+// =============================================================================
+// BLUR INTENSITIES
+// =============================================================================
+
+export const BLUR = {
+  light: 20,
+  medium: 40,
+  strong: 80,
+} as const;
+
+// =============================================================================
+// SOUND BUTTON ACCENT COLORS (subtle tints for glass)
+// =============================================================================
+
+export const SOUND_TINTS = {
+  purple: 'rgba(139, 92, 246, 0.25)',
+  blue: 'rgba(59, 130, 246, 0.25)',
+  cyan: 'rgba(6, 182, 212, 0.25)',
+  green: 'rgba(34, 197, 94, 0.25)',
+  amber: 'rgba(245, 158, 11, 0.25)',
+  orange: 'rgba(249, 115, 22, 0.25)',
+  rose: 'rgba(244, 63, 94, 0.25)',
+  pink: 'rgba(236, 72, 153, 0.25)',
+  slate: 'rgba(100, 116, 139, 0.25)',
+  violet: 'rgba(139, 92, 246, 0.25)',
+} as const;
+
+export type SoundTint = keyof typeof SOUND_TINTS;
 
 // =============================================================================
 // APP CONFIG

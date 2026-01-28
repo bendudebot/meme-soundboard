@@ -8,7 +8,7 @@ import { COLORS } from '../constants/theme';
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="light" translucent />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -26,6 +26,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background.primary,
   },
   content: {
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: 'transparent',
   },
 });
