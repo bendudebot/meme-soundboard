@@ -1,17 +1,18 @@
-import React, { useCallback } from 'react';
+import { useCallback, memo } from 'react';
 import { Pressable, Text, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withSequence,
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { MemeSound } from '../constants/sounds';
+
+import type { MemeSound } from '../constants/sounds';
 import { useSoundStore } from '../store/useSoundStore';
+import { COLORS, LAYOUT, ANIMATION, SHADOWS, CONFIG } from '../constants/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -21,33 +22,34 @@ interface SoundButtonProps {
   onPlay: () => void;
 }
 
-export function SoundButton({ sound, size, onPlay }: SoundButtonProps) {
+export const SoundButton = memo(function SoundButton({
+  sound,
+  size,
+  onPlay,
+}: SoundButtonProps) {
   const scale = useSharedValue(1);
-  const rotation = useSharedValue(0);
   const { toggleFavorite, isFavorite } = useSoundStore();
   const favorite = isFavorite(sound.id);
 
   const triggerHaptic = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
-  const handlePress = useCallback(() => {
+  const handlePressIn = useCallback(() => {
     'worklet';
-    // Bounce animation
-    scale.value = withSequence(
-      withTiming(0.75, { duration: 50 }),
-      withSpring(1.1, { damping: 3, stiffness: 400 }),
-      withSpring(1, { damping: 10, stiffness: 300 })
-    );
-    // Slight rotation wiggle
-    rotation.value = withSequence(
-      withTiming(-5, { duration: 50 }),
-      withTiming(5, { duration: 50 }),
-      withTiming(-3, { duration: 50 }),
-      withTiming(0, { duration: 50 })
-    );
-    runOnJS(triggerHaptic)();
-    runOnJS(onPlay)();
+    scale.value = withTiming(ANIMATION.press.scale, {
+      duration: ANIMATION.press.duration,
+    });
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    'worklet';
+    scale.value = withSpring(1, ANIMATION.spring.bouncy);
+  }, [scale]);
+
+  const handlePress = useCallback(() => {
+    triggerHaptic();
+    onPlay();
   }, [onPlay, triggerHaptic]);
 
   const handleLongPress = useCallback(() => {
@@ -56,18 +58,21 @@ export function SoundButton({ sound, size, onPlay }: SoundButtonProps) {
   }, [sound.id, toggleFavorite]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scale.value },
-      { rotate: `${rotation.value}deg` },
-    ],
+    transform: [{ scale: scale.value }],
   }));
 
   return (
     <AnimatedPressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       onPress={handlePress}
       onLongPress={handleLongPress}
-      delayLongPress={300}
-      style={[styles.container, { width: size, height: size }, animatedStyle]}
+      delayLongPress={CONFIG.longPressDelay}
+      style={[
+        styles.container,
+        { width: size, height: size },
+        animatedStyle,
+      ]}
     >
       <LinearGradient
         colors={sound.gradient}
@@ -75,13 +80,12 @@ export function SoundButton({ sound, size, onPlay }: SoundButtonProps) {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        {/* Favorite indicator */}
         {favorite && (
           <View style={styles.favoriteIndicator}>
-            <Text style={styles.favoriteHeart}>❤️</Text>
+            <Text style={styles.favoriteHeart}>♥</Text>
           </View>
         )}
-        
+
         <Text style={styles.emoji}>{sound.icon}</Text>
         <Text style={styles.name} numberOfLines={1}>
           {sound.name}
@@ -89,43 +93,44 @@ export function SoundButton({ sound, size, onPlay }: SoundButtonProps) {
       </LinearGradient>
     </AnimatedPressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
+    borderRadius: LAYOUT.radiusMedium,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    ...SHADOWS.medium,
   },
   gradient: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
+    padding: 6,
   },
   emoji: {
-    fontSize: 28,
-    marginBottom: 4,
+    fontSize: 26,
+    marginBottom: 2,
   },
   name: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: 9,
+    fontWeight: '600',
+    color: COLORS.text.primary,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    opacity: 0.95,
   },
   favoriteIndicator: {
     position: 'absolute',
     top: 4,
     right: 4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   favoriteHeart: {
-    fontSize: 12,
+    fontSize: 8,
+    color: COLORS.favorite,
   },
 });

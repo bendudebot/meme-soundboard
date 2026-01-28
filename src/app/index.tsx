@@ -1,25 +1,28 @@
 import { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
-import { SOUNDS, MemeSound } from '../constants/sounds';
-import { useSoundStore } from '../store/useSoundStore';
-import { SoundButton } from '../components/SoundButton';
-import { CategoryTabs } from '../components/CategoryTabs';
-import { SearchBar } from '../components/SearchBar';
 
-const { width } = Dimensions.get('window');
-const NUM_COLUMNS = 4;
-const PADDING = 16;
-const GAP = 8;
-const BUTTON_SIZE = (width - PADDING * 2 - GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
+import { SOUNDS, type MemeSound } from '../constants/sounds';
+import { COLORS, LAYOUT, TYPOGRAPHY, CONFIG } from '../constants/theme';
+import { useSoundStore } from '../store/useSoundStore';
+import { SoundButton, CategoryTabs, SearchBar } from '../components';
+
+// =============================================================================
+// LAYOUT CALCULATIONS
+// =============================================================================
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const BUTTON_SIZE =
+  (SCREEN_WIDTH -
+    LAYOUT.screenPadding * 2 -
+    LAYOUT.gridGap * (LAYOUT.gridColumns - 1)) /
+  LAYOUT.gridColumns;
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function HomeScreen() {
   const [search, setSearch] = useState('');
@@ -38,12 +41,12 @@ export default function HomeScreen() {
     }
 
     // Filter by search
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
+    const searchTerm = search.trim().toLowerCase();
+    if (searchTerm) {
       sounds = sounds.filter(
         (s) =>
-          s.name.toLowerCase().includes(searchLower) ||
-          s.category.toLowerCase().includes(searchLower)
+          s.name.toLowerCase().includes(searchTerm) ||
+          s.category.toLowerCase().includes(searchTerm)
       );
     }
 
@@ -58,7 +61,7 @@ export default function HomeScreen() {
           { shouldPlay: true }
         );
 
-        // Unload after playing
+        // Auto-unload after playback
         sound.setOnPlaybackStatusUpdate((status) => {
           if (status.isLoaded && status.didJustFinish) {
             sound.unloadAsync();
@@ -67,8 +70,8 @@ export default function HomeScreen() {
 
         incrementPlayCount();
 
-        // Show interstitial every 10 plays
-        if ((playCount + 1) % 10 === 0) {
+        // Interstitial ad trigger
+        if ((playCount + 1) % CONFIG.interstitialFrequency === 0) {
           // TODO: Show interstitial ad
           console.log('Show interstitial ad');
         }
@@ -92,19 +95,20 @@ export default function HomeScreen() {
 
   const keyExtractor = useCallback((item: MemeSound) => item.id, []);
 
+  const emptyIcon = selectedCategory === 'favorites' ? '💔' : '🔇';
+  const emptyText =
+    selectedCategory === 'favorites'
+      ? 'No favorites yet\nHold any sound to add it'
+      : 'No sounds found';
+
   return (
-    <LinearGradient
-      colors={['#667eea', '#764ba2', '#f093fb']}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
+    <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>🔊 Meme Sounds</Text>
+          <Text style={styles.title}>Meme Sounds</Text>
           <Text style={styles.subtitle}>
-            {filteredSounds.length} sounds • Tap to play • Hold to ❤️
+            {filteredSounds.length} sounds • Hold to favorite
           </Text>
         </View>
 
@@ -124,72 +128,71 @@ export default function HomeScreen() {
             data={filteredSounds}
             renderItem={renderSound}
             keyExtractor={keyExtractor}
-            numColumns={NUM_COLUMNS}
+            numColumns={LAYOUT.gridColumns}
             contentContainerStyle={styles.grid}
             showsVerticalScrollIndicator={false}
             columnWrapperStyle={styles.row}
-            initialNumToRender={20}
-            maxToRenderPerBatch={20}
-            windowSize={5}
+            initialNumToRender={CONFIG.flatList.initialNumToRender}
+            maxToRenderPerBatch={CONFIG.flatList.maxToRenderPerBatch}
+            windowSize={CONFIG.flatList.windowSize}
           />
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>
-              {selectedCategory === 'favorites' ? '💔' : '🔇'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {selectedCategory === 'favorites'
-                ? 'No favorites yet!\nHold any sound to add it'
-                : 'No sounds found'}
-            </Text>
+            <Text style={styles.emptyEmoji}>{emptyIcon}</Text>
+            <Text style={styles.emptyText}>{emptyText}</Text>
           </View>
         )}
 
-        {/* Ad Banner Placeholder */}
-        <View style={styles.adBanner}>
-          <Text style={styles.adText}>📢 Ad Banner (AdMob)</Text>
-        </View>
+        {/* Ad Banner */}
+        <LinearGradient
+          colors={[COLORS.background.secondary, COLORS.background.primary]}
+          style={styles.adBanner}
+        >
+          <Text style={styles.adText}>Ad Banner</Text>
+        </LinearGradient>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
+
+// =============================================================================
+// STYLES
+// =============================================================================
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background.primary,
   },
   safeArea: {
     flex: 1,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-    alignItems: 'center',
+    paddingHorizontal: LAYOUT.screenPadding + 4,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
+    fontSize: TYPOGRAPHY.sizes.title,
+    fontWeight: TYPOGRAPHY.weights.heavy,
+    color: COLORS.text.primary,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text.tertiary,
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.weights.medium,
   },
   grid: {
-    paddingHorizontal: PADDING,
+    paddingHorizontal: LAYOUT.screenPadding,
     paddingBottom: 80,
     paddingTop: 8,
   },
   row: {
     justifyContent: 'flex-start',
-    gap: GAP,
-    marginBottom: GAP,
+    gap: LAYOUT.gridGap,
+    marginBottom: LAYOUT.gridGap,
   },
   emptyState: {
     flex: 1,
@@ -198,28 +201,31 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   emptyEmoji: {
-    fontSize: 64,
+    fontSize: 56,
     marginBottom: 16,
+    opacity: 0.8,
   },
   emptyText: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: TYPOGRAPHY.sizes.lg,
+    color: COLORS.text.tertiary,
     textAlign: 'center',
-    fontWeight: '600',
-    lineHeight: 26,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    lineHeight: 24,
   },
   adBanner: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    paddingVertical: 14,
+    paddingVertical: 16,
+    paddingBottom: 24,
     alignItems: 'center',
   },
   adText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
+    color: COLORS.text.muted,
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });

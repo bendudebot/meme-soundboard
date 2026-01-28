@@ -1,16 +1,12 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-} from 'react-native';
+import { memo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import Animated, {
   useAnimatedStyle,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
-import { CATEGORIES } from '../constants/sounds';
+
+import { CATEGORIES, type Category } from '../constants/sounds';
+import { COLORS, LAYOUT, TYPOGRAPHY, ANIMATION } from '../constants/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -20,16 +16,21 @@ interface CategoryTabsProps {
   favoritesCount: number;
 }
 
-export function CategoryTabs({
+interface FavoritesTab {
+  id: 'favorites';
+  name: string;
+  icon: string;
+}
+
+type TabItem = Category | FavoritesTab;
+
+export const CategoryTabs = memo(function CategoryTabs({
   selectedCategory,
   onSelectCategory,
   favoritesCount,
 }: CategoryTabsProps) {
-  // Add favorites tab at the beginning
-  const allTabs = [
-    { id: 'favorites', name: 'Favorites', icon: '❤️' },
-    ...CATEGORIES,
-  ];
+  const favoritesTab: FavoritesTab = { id: 'favorites', name: 'Favorites', icon: '♥' };
+  const allTabs: TabItem[] = [favoritesTab, ...CATEGORIES];
 
   return (
     <View style={styles.container}>
@@ -50,21 +51,30 @@ export function CategoryTabs({
       </ScrollView>
     </View>
   );
-}
+});
 
 interface CategoryTabProps {
-  category: { id: string; name: string; icon: string };
+  category: TabItem;
   isSelected: boolean;
   onPress: () => void;
   badge?: number;
 }
 
-function CategoryTab({ category, isSelected, onPress, badge }: CategoryTabProps) {
+const CategoryTab = memo(function CategoryTab({
+  category,
+  isSelected,
+  onPress,
+  badge,
+}: CategoryTabProps) {
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withSpring(isSelected ? 1.05 : 1) }],
-    backgroundColor: isSelected
-      ? 'rgba(255,255,255,0.95)'
-      : 'rgba(255,255,255,0.6)',
+    backgroundColor: withTiming(
+      isSelected ? COLORS.accent.primary : COLORS.background.elevated,
+      { duration: ANIMATION.duration.fast }
+    ),
+    borderColor: withTiming(
+      isSelected ? COLORS.accent.primary : COLORS.border,
+      { duration: ANIMATION.duration.fast }
+    ),
   }));
 
   return (
@@ -83,48 +93,49 @@ function CategoryTab({ category, isSelected, onPress, badge }: CategoryTabProps)
       )}
     </AnimatedPressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: LAYOUT.screenPadding,
     gap: 8,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingVertical: 8,
+    borderRadius: LAYOUT.radiusFull,
     gap: 6,
+    borderWidth: 1,
   },
   tabIcon: {
-    fontSize: 16,
+    fontSize: 14,
   },
   tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    color: COLORS.text.secondary,
   },
   tabTextSelected: {
-    color: '#333',
-    fontWeight: '700',
+    color: COLORS.text.primary,
+    fontWeight: TYPOGRAPHY.weights.semibold,
   },
   badge: {
-    backgroundColor: '#ff4444',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    backgroundColor: COLORS.favorite,
+    borderRadius: LAYOUT.radiusFull,
+    minWidth: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
   },
   badgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
+    color: COLORS.text.primary,
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.bold,
   },
 });

@@ -2,40 +2,66 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface SoundStore {
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface SoundStoreState {
   favorites: string[];
   playCount: number;
+}
+
+interface SoundStoreActions {
   toggleFavorite: (soundId: string) => void;
   isFavorite: (soundId: string) => boolean;
   incrementPlayCount: () => void;
+  resetPlayCount: () => void;
 }
+
+type SoundStore = SoundStoreState & SoundStoreActions;
+
+// =============================================================================
+// STORE
+// =============================================================================
+
+const STORAGE_KEY = 'meme-soundboard-storage';
 
 export const useSoundStore = create<SoundStore>()(
   persist(
     (set, get) => ({
+      // State
       favorites: [],
       playCount: 0,
-      
-      toggleFavorite: (soundId: string) => {
+
+      // Actions
+      toggleFavorite: (soundId) => {
         const { favorites } = get();
-        if (favorites.includes(soundId)) {
-          set({ favorites: favorites.filter(id => id !== soundId) });
-        } else {
-          set({ favorites: [...favorites, soundId] });
-        }
+        const isFav = favorites.includes(soundId);
+
+        set({
+          favorites: isFav
+            ? favorites.filter((id) => id !== soundId)
+            : [...favorites, soundId],
+        });
       },
-      
-      isFavorite: (soundId: string) => {
-        return get().favorites.includes(soundId);
-      },
-      
+
+      isFavorite: (soundId) => get().favorites.includes(soundId),
+
       incrementPlayCount: () => {
-        set({ playCount: get().playCount + 1 });
+        set((state) => ({ playCount: state.playCount + 1 }));
+      },
+
+      resetPlayCount: () => {
+        set({ playCount: 0 });
       },
     }),
     {
-      name: 'meme-soundboard-storage',
+      name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        favorites: state.favorites,
+        playCount: state.playCount,
+      }),
     }
   )
 );

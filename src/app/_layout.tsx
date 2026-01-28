@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
 
+import { COLORS } from '../constants/theme';
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -10,7 +12,8 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#1a1a2e' },
+          contentStyle: styles.content,
+          animation: 'fade',
         }}
       />
     </GestureHandlerRootView>
@@ -20,5 +23,9 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  content: {
+    backgroundColor: COLORS.background.primary,
   },
 });
