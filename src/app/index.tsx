@@ -1,141 +1,156 @@
-import { useState, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  Pressable,
-  TextInput,
+import { useState, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
-import * as Haptics from 'expo-haptics';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring,
-} from 'react-native-reanimated';
-import { SOUNDS } from '../constants/sounds';
+import { SOUNDS, MemeSound } from '../constants/sounds';
+import { useSoundStore } from '../store/useSoundStore';
+import { SoundButton } from '../components/SoundButton';
+import { CategoryTabs } from '../components/CategoryTabs';
+import { SearchBar } from '../components/SearchBar';
 
 const { width } = Dimensions.get('window');
-const BUTTON_SIZE = (width - 60) / 4; // 4 columns with padding
+const NUM_COLUMNS = 4;
+const PADDING = 16;
+const GAP = 8;
+const BUTTON_SIZE = (width - PADDING * 2 - GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
 export default function HomeScreen() {
   const [search, setSearch] = useState('');
-  const [playCount, setPlayCount] = useState(0);
-  
-  const filteredSounds = SOUNDS.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.category.toLowerCase().includes(search.toLowerCase())
-  );
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const { favorites, playCount, incrementPlayCount } = useSoundStore();
 
-  const playSound = useCallback(async (url: string) => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: url },
-        { shouldPlay: true }
-      );
-      
-      // Unload after playing
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
-      
-      setPlayCount(c => c + 1);
-      
-      // Show interstitial every 10 plays
-      if ((playCount + 1) % 10 === 0) {
-        // TODO: Show interstitial ad
-        console.log('Show interstitial ad');
-      }
-    } catch (error) {
-      console.error('Error playing sound:', error);
+  // Filter sounds based on search and category
+  const filteredSounds = useMemo(() => {
+    let sounds = SOUNDS;
+
+    // Filter by category
+    if (selectedCategory === 'favorites') {
+      sounds = sounds.filter((s) => favorites.includes(s.id));
+    } else if (selectedCategory !== 'all') {
+      sounds = sounds.filter((s) => s.category === selectedCategory);
     }
-  }, [playCount]);
 
-  const renderSound = ({ item }: { item: typeof SOUNDS[0] }) => (
-    <SoundButton sound={item} onPress={() => playSound(item.url)} />
+    // Filter by search
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      sounds = sounds.filter(
+        (s) =>
+          s.name.toLowerCase().includes(searchLower) ||
+          s.category.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return sounds;
+  }, [search, selectedCategory, favorites]);
+
+  const playSound = useCallback(
+    async (url: string) => {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: url },
+          { shouldPlay: true }
+        );
+
+        // Unload after playing
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            sound.unloadAsync();
+          }
+        });
+
+        incrementPlayCount();
+
+        // Show interstitial every 10 plays
+        if ((playCount + 1) % 10 === 0) {
+          // TODO: Show interstitial ad
+          console.log('Show interstitial ad');
+        }
+      } catch (error) {
+        console.error('Error playing sound:', error);
+      }
+    },
+    [playCount, incrementPlayCount]
   );
+
+  const renderSound = useCallback(
+    ({ item }: { item: MemeSound }) => (
+      <SoundButton
+        sound={item}
+        size={BUTTON_SIZE}
+        onPlay={() => playSound(item.url)}
+      />
+    ),
+    [playSound]
+  );
+
+  const keyExtractor = useCallback((item: MemeSound) => item.id, []);
 
   return (
     <LinearGradient
-      colors={['#FF6B35', '#F7C59F', '#EFEFEF']}
+      colors={['#667eea', '#764ba2', '#f093fb']}
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>🔊 Meme Sounds</Text>
-          <Text style={styles.subtitle}>Tap to play!</Text>
+          <Text style={styles.subtitle}>
+            {filteredSounds.length} sounds • Tap to play • Hold to ❤️
+          </Text>
         </View>
 
-        {/* Search */}
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search sounds..."
-            placeholderTextColor="#666"
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
+        {/* Search Bar */}
+        <SearchBar value={search} onChangeText={setSearch} />
+
+        {/* Category Tabs */}
+        <CategoryTabs
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          favoritesCount={favorites.length}
+        />
 
         {/* Sound Grid */}
-        <FlatList
-          data={filteredSounds}
-          renderItem={renderSound}
-          keyExtractor={(item) => item.id}
-          numColumns={4}
-          contentContainerStyle={styles.grid}
-          showsVerticalScrollIndicator={false}
-          columnWrapperStyle={styles.row}
-        />
+        {filteredSounds.length > 0 ? (
+          <FlatList
+            data={filteredSounds}
+            renderItem={renderSound}
+            keyExtractor={keyExtractor}
+            numColumns={NUM_COLUMNS}
+            contentContainerStyle={styles.grid}
+            showsVerticalScrollIndicator={false}
+            columnWrapperStyle={styles.row}
+            initialNumToRender={20}
+            maxToRenderPerBatch={20}
+            windowSize={5}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>
+              {selectedCategory === 'favorites' ? '💔' : '🔇'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {selectedCategory === 'favorites'
+                ? 'No favorites yet!\nHold any sound to add it'
+                : 'No sounds found'}
+            </Text>
+          </View>
+        )}
 
         {/* Ad Banner Placeholder */}
         <View style={styles.adBanner}>
-          <Text style={styles.adText}>📢 Ad Banner Here (AdMob)</Text>
+          <Text style={styles.adText}>📢 Ad Banner (AdMob)</Text>
         </View>
       </SafeAreaView>
     </LinearGradient>
-  );
-}
-
-function SoundButton({ sound, onPress }: { sound: typeof SOUNDS[0], onPress: () => void }) {
-  const scale = useSharedValue(1);
-
-  const handlePress = () => {
-    scale.value = withSpring(0.85, {}, () => {
-      scale.value = withSpring(1);
-    });
-    onPress();
-  };
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Pressable onPress={handlePress}>
-      <Animated.View style={[styles.soundButton, animatedStyle]}>
-        <LinearGradient
-          colors={sound.gradient}
-          style={styles.soundGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.soundEmoji}>{sound.icon}</Text>
-          <Text style={styles.soundName} numberOfLines={1}>{sound.name}</Text>
-        </LinearGradient>
-      </Animated.View>
-    </Pressable>
   );
 }
 
@@ -147,73 +162,64 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1a1a2e',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
     marginTop: 4,
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  searchInput: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
+    fontWeight: '500',
   },
   grid: {
-    paddingHorizontal: 10,
+    paddingHorizontal: PADDING,
     paddingBottom: 80,
+    paddingTop: 8,
   },
   row: {
     justifyContent: 'flex-start',
-    gap: 8,
-    marginBottom: 8,
+    gap: GAP,
+    marginBottom: GAP,
   },
-  soundButton: {
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  soundGradient: {
+  emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
+    paddingBottom: 100,
   },
-  soundEmoji: {
-    fontSize: 28,
-    marginBottom: 4,
+  emptyEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
   },
-  soundName: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#fff',
+  emptyText: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    fontWeight: '600',
+    lineHeight: 26,
   },
   adBanner: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#333',
-    padding: 16,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    paddingVertical: 14,
     alignItems: 'center',
   },
   adText: {
     color: '#fff',
     fontSize: 12,
+    fontWeight: '500',
   },
 });
